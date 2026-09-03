@@ -1,49 +1,53 @@
 import logging
-from urllib.parse import urlencode
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.crypto import create_oauth_state, OAuthState
-from app.auth.oauth import binance_oauth
-from app.auth.token_store import token_store
+from app.auth.binance_oauth import binance_oauth_service
+from app.auth.user_auth import get_current_user
 from app.core.config import get_settings
+from app.db.database import get_session
+from app.db.models import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/binance")
 
-# In-memory state store
-_oauth_states: dict[str, OAuthState] = {}
+
+async def _get_user(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """FastAPI dependency: extract current user from Authorization header."""
+    auth_header = request.headers.get("Authorization")
+    return await get_current_user(authorization=auth_header, session=session)
 
 
 @router.get("/auth", summary="Start Binance OAuth flow")
-async def start_auth() -> RedirectResponse:
+async def start_auth(
+    user: User = Depends(_get_user),
+    session: AsyncSession = Depends(get_session),
+) -> RedirectResponse:
     settings = get_settings()
 
-    if not settings.binance_oauth_client_id:
+    if not settings.binance_oauth_client_metadata_url:
         raise HTTPException(
             status_code=503,
             detail={
                 "error": {
                     "code": "BINANCE_OAUTH_NOT_CONFIGURED",
-                    "message": "BINANCE_OAUTH_CLIENT_ID is not configured. Register a Binance OAuth app first.",
+                    "message": "BINANCE_OAUTH_CLIENT_METADATA_URL is not configured.",
                 }
             },
         )
 
-    # Cleanup expired states
-    expired = [k for k, v in _oauth_states.items() if v.is_expired]
-    for k in expired:
-        del _oauth_states[k]
+    await binance_oauth_service.cleanup_expired_states(session)
 
-    oauth_state = create_oauth_state()
-    _oauth_states[oauth_state.state] = oauth_state
+    oauth_state = await binance_oauth_service.create_oauth_state(session, user.id)
 
-    auth_url = await binance_oauth.get_authorization_url(
-        state=oauth_state.state,
+    auth_url = binance_oauth_service.get_authorization_url(
+        state_value=oauth_state.state,
         code_challenge=oauth_state.code_challenge,
-        redirect_uri=settings.binance_oauth_redirect_uri,
-        scopes=settings.binance_oauth_scopes or None,
     )
 
     return RedirectResponse(url=auth_url)
@@ -55,6 +59,7 @@ async def auth_callback(
     state: str | None = Query(default=None),
     error: str | None = Query(default=None),
     error_description: str | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     if error:
         logger.warning("OAuth error: %s - %s", error, error_description)
@@ -79,50 +84,26 @@ async def auth_callback(
             },
         )
 
-    stored_state = _oauth_states.pop(state, None)
-    if stored_state is None:
+    oauth_state = await binance_oauth_service.consume_oauth_state(session, state)
+    if oauth_state is None:
         raise HTTPException(
             status_code=400,
             detail={
                 "error": {
                     "code": "OAUTH_INVALID_STATE",
-                    "message": "Invalid or expired OAuth state. Please try again.",
+                    "message": "Invalid, expired, or already-used OAuth state.",
                 }
             },
         )
 
-    if stored_state.is_expired:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": {
-                    "code": "OAUTH_STATE_EXPIRED",
-                    "message": "OAuth state expired. Please try again.",
-                }
-            },
-        )
+    conn = await binance_oauth_service.exchange_code(
+        session=session,
+        user_id=oauth_state.user_id,
+        code=code,
+        code_verifier=oauth_state.code_verifier,
+    )
 
-    if stored_state.state != state:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": {
-                    "code": "OAUTH_STATE_MISMATCH",
-                    "message": "OAuth state mismatch. Possible CSRF attack.",
-                }
-            },
-        )
-
-    settings = get_settings()
-
-    try:
-        token = await binance_oauth.exchange_code(
-            code=code,
-            code_verifier=stored_state.code_verifier,
-            redirect_uri=settings.binance_oauth_redirect_uri,
-        )
-    except Exception as e:
-        logger.error("Token exchange failed: %s", e)
+    if conn is None:
         raise HTTPException(
             status_code=502,
             detail={
@@ -133,15 +114,22 @@ async def auth_callback(
             },
         )
 
-    return {"authenticated": True, "token_type": token.token_type, "scope": token.scope}
+    return {"authenticated": True}
 
 
 @router.get("/auth/status", summary="Check Binance auth status")
-async def auth_status() -> dict:
-    return {"authenticated": token_store.is_authenticated}
+async def auth_status(
+    user: User = Depends(_get_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    status = await binance_oauth_service.get_connection_status(session, user.id)
+    return status
 
 
 @router.post("/auth/logout", summary="Logout from Binance")
-async def logout() -> dict:
-    await token_store.delete()
+async def logout(
+    user: User = Depends(_get_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    await binance_oauth_service.delete_connection(session, user.id)
     return {"authenticated": False}

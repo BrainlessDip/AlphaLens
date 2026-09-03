@@ -7,11 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.exceptions import AppException, app_exception_handler
 from app.core.logging import setup_logging
+from app.db.database import init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
+    await init_db()
     yield
 
 
@@ -35,7 +37,10 @@ def create_app() -> FastAPI:
     )
 
     from app.api.router import api_router
+    from app.api.routes.metadata import router as metadata_router
+
     app.include_router(api_router)
+    app.include_router(metadata_router)
 
     return app
 

@@ -3,9 +3,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.binance.client import BinanceRESTProvider
 from app.binance.models import Kline, OrderBook, OrderBookEntry, Ticker24h, TickerPrice
+from app.db.database import get_session
+from app.db.models import Base
 from app.main import app
 
 
@@ -49,7 +52,23 @@ def mock_provider() -> MagicMock:
 
 
 @pytest.fixture
-async def client() -> AsyncIterator[AsyncClient]:
+async def db_session() -> AsyncIterator[AsyncSession]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        yield session
+    await engine.dispose()
+
+
+@pytest.fixture
+async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
+    async def override_get_session():
+        yield db_session
+
+    app.dependency_overrides[get_session] = override_get_session
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+    app.dependency_overrides.clear()

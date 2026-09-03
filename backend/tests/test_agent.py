@@ -36,7 +36,7 @@ async def test_analyze_missing_symbol(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_chat_streaming_response(client: AsyncClient, mock_provider: MagicMock) -> None:
-    from app.api.routes.agent import get_provider, get_session
+    from app.api.routes.agent import get_provider
     from app.db.database import get_session as real_get_session
 
     mock_session = MagicMock()
@@ -52,13 +52,9 @@ async def test_chat_streaming_response(client: AsyncClient, mock_provider: Magic
                 yield " response"
         yield FakeStream()
 
-    async def override_get_session():
-        yield mock_session
-
     async def override_get_provider():
         return mock_provider
 
-    app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_provider] = override_get_provider
 
     with patch("app.api.routes.agent.market_agent") as mock_agent:
