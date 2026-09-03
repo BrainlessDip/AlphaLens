@@ -1,13 +1,38 @@
+import axios from "axios"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useBinanceStatus, useBinanceLogout } from "@/hooks/useBinanceStatus"
-import { getBinanceAuthUrl } from "@/api/binance"
+import { useAuth } from "@/contexts/AuthContext"
 import { ExternalLink, Unlink } from "lucide-react"
 
 export function BinanceConnectionCard() {
   const { data: status, isLoading } = useBinanceStatus()
   const logoutMutation = useBinanceLogout()
+  const { token } = useAuth()
+
+  const handleConnect = async () => {
+    try {
+      const res = await axios.get("/api/v1/binance/auth", {
+        headers: { Authorization: `Bearer ${token}` },
+        maxRedirects: 0,
+        validateStatus: (s) => s < 400,
+      })
+      const redirectUrl = res.request?.responseURL || res.data
+      if (typeof redirectUrl === "string" && redirectUrl.startsWith("http")) {
+        window.location.href = redirectUrl
+      }
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const location = err.response.headers?.location
+        if (location) {
+          window.location.href = location
+          return
+        }
+      }
+      console.error("Failed to start OAuth:", err)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -49,11 +74,9 @@ export function BinanceConnectionCard() {
             Disconnect
           </Button>
         ) : (
-          <Button size="sm">
-            <a href={getBinanceAuthUrl()} className="flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              Connect Binance
-            </a>
+          <Button size="sm" onClick={handleConnect}>
+            <ExternalLink className="h-4 w-4" />
+            Connect Binance
           </Button>
         )}
       </CardContent>
