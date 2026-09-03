@@ -6,7 +6,15 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.binance.client import BinanceRESTProvider
-from app.binance.models import Kline, OrderBook, OrderBookEntry, Ticker24h, TickerPrice
+from app.binance.models import (
+    ExchangeInfo,
+    Kline,
+    OrderBook,
+    OrderBookEntry,
+    RecentTrade,
+    Ticker24h,
+    TickerPrice,
+)
 from app.db.database import get_session
 from app.db.models import Base
 from app.main import app
@@ -47,6 +55,13 @@ def mock_provider() -> MagicMock:
         last_update_id=12345,
         bids=[OrderBookEntry(price=59900.0, quantity=1.5)],
         asks=[OrderBookEntry(price=60100.0, quantity=2.0)],
+    )
+    provider.get_recent_trades.return_value = [
+        RecentTrade(id=1, price=60000.0, quantity=0.5, time=1690000000000, is_buyer_maker=False),
+        RecentTrade(id=2, price=59990.0, quantity=0.3, time=1690000001000, is_buyer_maker=True),
+    ]
+    provider.get_exchange_info.return_value = ExchangeInfo(
+        timezone="UTC", trading_symbols=["BTCUSDT", "ETHUSDT"]
     )
     return provider
 

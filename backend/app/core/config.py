@@ -21,17 +21,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440
 
-    # Token encryption key (Fernet). Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-    token_encryption_key: str = ""
-
-    # Binance OAuth (Client ID Metadata Document flow)
-    binance_mcp_url: str = "https://agent.binance.com/mcp/agentic"
-    binance_oauth_authorization_endpoint: str = "https://accounts.binance.com/agentic-oauth/authorize"
-    binance_oauth_token_endpoint: str = "https://accounts.binance.com/oauth-agentic/token"
-    binance_oauth_client_metadata_url: str = "http://127.0.0.1:8000/.well-known/oauth-client-metadata.json"
-    binance_oauth_redirect_uri: str = "http://127.0.0.1:8000/api/v1/binance/auth/callback"
-    binance_oauth_mcp_resource: str = "https://agent.binance.com/mcp/agentic"
-    state_ttl_seconds: int = 600
+    # Binance REST API (public market data needs no auth)
+    binance_api_key: str = ""
+    binance_api_secret: str = ""
+    binance_base_url: str = "https://api.binance.com"
+    binance_request_timeout: float = 10.0
 
 
 @lru_cache

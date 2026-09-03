@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,4 +122,5 @@ async def analyze(
             "It does not account for off-chain factors, news events, regulatory changes, "
             "or whale movements. This is observational analysis, not financial advice."
         ),
+        data_timestamp=datetime.now(timezone.utc).isoformat(),
     )

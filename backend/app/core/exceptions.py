@@ -26,15 +26,15 @@ class AgentError(AppException):
         super().__init__(code="AGENT_ERROR", message=message, status_code=500)
 
 
-class BinanceAuthError(AppException):
-    def __init__(self, message: str = "Binance authentication failed") -> None:
-        super().__init__(code="BINANCE_AUTH_ERROR", message=message, status_code=401)
+class AuthError(AppException):
+    def __init__(self, message: str = "Authentication failed") -> None:
+        super().__init__(code="AUTH_ERROR", message=message, status_code=401)
 
 
-class BinanceAuthRequiredError(AppException):
+class AuthRequiredError(AppException):
     def __init__(self) -> None:
         super().__init__(
-            code="BINANCE_AUTH_REQUIRED",
-            message="Binance authorization is required. Visit /api/v1/binance/auth to connect.",
+            code="AUTH_REQUIRED",
+            message="Authentication is required.",
             status_code=401,
         )

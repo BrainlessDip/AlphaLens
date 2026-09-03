@@ -3,6 +3,15 @@ from dataclasses import dataclass
 
 from pydantic_ai import RunContext
 
+from app.agent.analysis import (
+    closes,
+    exponential_moving_average,
+    rsi,
+    simple_moving_average,
+    support_resistance,
+    volatility_pct,
+    volume_summary,
+)
 from app.binance.client import BinanceRESTProvider
 
 logger = logging.getLogger(__name__)
@@ -47,9 +56,9 @@ async def get_klines(
     interval: str = "1h",
     limit: int = 24,
 ) -> str:
-    """Get candlestick/kline data. Interval options: 1m, 5m, 15m, 1h, 4h, 1d. Limit: number of candles (max 1000)."""
+    """Get candlestick/kline data. Interval options: 1m, 5m, 15m, 1h, 4h, 1d. Limit: number of candles (max 200)."""
     try:
-        klines = await ctx.deps.provider.get_klines(symbol.upper(), interval, min(limit, 1000))
+        klines = await ctx.deps.provider.get_klines(symbol.upper(), interval, min(limit, 200))
         if not klines:
             return f"No kline data found for {symbol}"
 
@@ -91,3 +100,79 @@ async def get_order_book(ctx: RunContext[AgentDeps], symbol: str, limit: int = 1
     except Exception as e:
         logger.error("get_order_book failed for %s: %s", symbol, e)
         return f"Error fetching order book for {symbol}: {e}"
+
+
+async def get_recent_trades(ctx: RunContext[AgentDeps], symbol: str, limit: int = 20) -> str:
+    """Get most recent trades for a trading pair. Shows price, quantity, and buy/sell side."""
+    try:
+        trades = await ctx.deps.provider.get_recent_trades(symbol.upper(), min(limit, 100))
+        if not trades:
+            return f"No recent trades found for {symbol}"
+
+        lines = [f"Recent trades for {symbol.upper()} (last {len(trades)}):"]
+        buy_vol = 0.0
+        sell_vol = 0.0
+        for t in trades[-10:]:
+            side = "SELL" if t.is_buyer_maker else "BUY"
+            if t.is_buyer_maker:
+                sell_vol += t.quantity
+            else:
+                buy_vol += t.quantity
+            lines.append(f"  {t.time} | {side} ${t.price:,.2f} x {t.quantity:,.4f}")
+
+        total = buy_vol + sell_vol
+        buy_pct = (buy_vol / total * 100) if total else 0.0
+        lines.append(f"\nBuy volume: {buy_pct:.1f}% | Sell volume: {100 - buy_pct:.1f}%")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.error("get_recent_trades failed for %s: %s", symbol, e)
+        return f"Error fetching recent trades for {symbol}: {e}"
+
+
+async def get_exchange_info(ctx: RunContext[AgentDeps]) -> str:
+    """List currently tradeable spot symbols. Use to validate a symbol before querying it."""
+    try:
+        info = await ctx.deps.provider.get_exchange_info()
+        majors = [s for s in info.trading_symbols if s.endswith("USDT")][:20]
+        return (
+            f"Binance Spot ({info.timezone}), {len(info.trading_symbols)} trading symbols. "
+            f"Examples: {', '.join(majors)}"
+        )
+    except Exception as e:
+        logger.error("get_exchange_info failed: %s", e)
+        return f"Error fetching exchange info: {e}"
+
+
+async def get_indicators(
+    ctx: RunContext[AgentDeps],
+    symbol: str,
+    interval: str = "1h",
+) -> str:
+    """Compute deterministic indicators (SMA-20, EMA-20, RSI-14, volatility, support/resistance, volume) from klines."""
+    try:
+        klines = await ctx.deps.provider.get_klines(symbol.upper(), interval, 100)
+        if len(klines) < 15:
+            return f"Not enough kline data for {symbol} to compute indicators"
+
+        c = closes(klines)
+        sma20 = simple_moving_average(c, 20)
+        ema20 = exponential_moving_average(c, 20)
+        rsi14 = rsi(c, 14)
+        vol = volatility_pct(c, 24)
+        sr = support_resistance(klines)
+        vs = volume_summary(klines)
+
+        def fmt(v: float | None, suffix: str = "") -> str:
+            return f"{v:,.2f}{suffix}" if v is not None else "n/a"
+
+        return (
+            f"Indicators for {symbol.upper()} ({interval}, {len(klines)} candles):\n"
+            f"  SMA-20: ${fmt(sma20)} | EMA-20: ${fmt(ema20)}\n"
+            f"  RSI-14: {fmt(rsi14)} | Volatility: {fmt(vol, '%')}\n"
+            f"  Support: ${fmt(sr['support'])} | Resistance: ${fmt(sr['resistance'])}\n"
+            f"  Volume avg: {fmt(vs['average'])} | latest: {fmt(vs['latest'])}"
+            + (f" (x{vs['ratio']:.1f} avg)" if vs["ratio"] is not None else "")
+        )
+    except Exception as e:
+        logger.error("get_indicators failed for %s: %s", symbol, e)
+        return f"Error computing indicators for {symbol}: {e}"

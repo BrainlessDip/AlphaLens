@@ -29,3 +29,4 @@ class AnalyzeResponse(BaseModel):
     market_observations: list[str]
     agent_analysis: str
     confidence_and_limitations: str
+    data_timestamp: str

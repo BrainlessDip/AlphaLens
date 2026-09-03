@@ -42,3 +42,16 @@ class OrderBook(BaseModel):
     last_update_id: int
     bids: list[OrderBookEntry]
     asks: list[OrderBookEntry]
+
+
+class RecentTrade(BaseModel):
+    id: int
+    price: float
+    quantity: float
+    time: int
+    is_buyer_maker: bool
+
+
+class ExchangeInfo(BaseModel):
+    timezone: str
+    trading_symbols: list[str]

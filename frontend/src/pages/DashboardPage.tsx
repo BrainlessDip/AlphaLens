@@ -2,9 +2,7 @@ import { Link } from "react-router"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { BinanceConnectionCard } from "@/components/binance/BinanceConnectionCard"
 import { useHealth } from "@/hooks/useHealth"
-import { useBinanceStatus } from "@/hooks/useBinanceStatus"
 import {
   BarChart3,
   MessageSquare,
@@ -23,7 +21,6 @@ const quickPrompts = [
 
 export function DashboardPage() {
   const { data: health, isLoading: healthLoading } = useHealth()
-  const { data: binance } = useBinanceStatus()
 
   return (
     <div className="space-y-8">
@@ -74,14 +71,12 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Binance</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Market Data</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
-              <Badge variant={binance?.connected ? "success" : "secondary"}>
-                {binance?.connected ? "Connected" : "Disconnected"}
-              </Badge>
+              <Badge variant="success">Binance Spot API</Badge>
             </div>
           </CardContent>
         </Card>
@@ -101,8 +96,6 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <BinanceConnectionCard />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Quick Prompts</h2>

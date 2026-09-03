@@ -12,12 +12,6 @@ export interface HealthResponse {
   status: string
 }
 
-export interface BinanceAuthStatus {
-  connected: boolean
-  expires_at: string | null
-  needs_reauth: boolean
-}
-
 export interface AnalyzeRequest {
   symbol: string
   question: string
@@ -42,6 +36,7 @@ export interface AnalyzeResponse {
   market_observations: string[]
   agent_analysis: string
   confidence_and_limitations: string
+  data_timestamp: string
 }
 
 export interface ChatRequest {

@@ -203,9 +203,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
-    { name = "authlib" },
     { name = "bcrypt" },
-    { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
@@ -229,9 +227,7 @@ dev = [
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "alembic", specifier = ">=1.19.1" },
-    { name = "authlib", specifier = ">=1.8.0" },
     { name = "bcrypt", specifier = ">=5.0.0" },
-    { name = "cryptography", specifier = ">=50.0.1" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "pydantic", specifier = ">=2.10.0" },

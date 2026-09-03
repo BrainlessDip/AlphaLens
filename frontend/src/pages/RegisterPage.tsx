@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { registerUser } from "@/api/binance"
+import { registerUser } from "@/api/auth"
 import { useAuth } from "@/contexts/AuthContext"
 import { BarChart3, AlertCircle } from "lucide-react"
 

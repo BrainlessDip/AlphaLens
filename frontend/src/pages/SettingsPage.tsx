@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BinanceConnectionCard } from "@/components/binance/BinanceConnectionCard"
 import { useHealth } from "@/hooks/useHealth"
 import { Activity } from "lucide-react"
 
@@ -11,10 +10,8 @@ export function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your connections and application settings.</p>
+        <p className="text-muted-foreground">Application settings and status.</p>
       </div>
-
-      <BinanceConnectionCard />
 
       <Card>
         <CardHeader>
@@ -25,6 +22,10 @@ export function SettingsPage() {
           <div className="flex items-center justify-between">
             <span className="text-sm">AlphaLens</span>
             <span className="text-xs text-muted-foreground">Binance Market Intelligence Agent</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm">Market data source</span>
+            <span className="text-xs text-muted-foreground">Binance Spot REST API (public)</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm">Backend Status</span>

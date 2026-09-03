@@ -5,7 +5,7 @@ import { MarketObservations } from "./MarketObservations"
 import type { AnalyzeResponse } from "@/types/api"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { AlertTriangle, Brain } from "lucide-react"
+import { AlertTriangle, Brain, Clock } from "lucide-react"
 
 interface AnalysisResultProps {
   data: AnalyzeResponse
@@ -51,8 +51,12 @@ export function AnalysisResult({ data }: AnalysisResultProps) {
             Confidence & Limitations
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">{data.confidence_and_limitations}</p>
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            Data as of {new Date(data.data_timestamp).toLocaleString()}
+          </p>
         </CardContent>
       </Card>
     </div>

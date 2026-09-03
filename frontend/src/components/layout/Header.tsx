@@ -2,8 +2,6 @@ import { Link, useLocation } from "react-router"
 import { LayoutDashboard, MessageSquare, BarChart3, Settings, Menu, X, LogOut } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useBinanceStatus } from "@/hooks/useBinanceStatus"
 import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 
@@ -17,7 +15,6 @@ const navItems = [
 export function Header() {
   const location = useLocation()
   const { user, logout } = useAuth()
-  const { data: binance } = useBinanceStatus()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -49,10 +46,6 @@ export function Header() {
         <div className="flex-1" />
 
         <div className="hidden md:flex items-center gap-3">
-          <Badge variant={binance?.connected ? "success" : "secondary"}>
-            {binance?.connected ? "Binance Connected" : "Binance Disconnected"}
-          </Badge>
-
           {user && (
             <>
               <span className="text-xs text-muted-foreground">{user.username}</span>
@@ -91,19 +84,14 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
-            <div className="px-3 py-2 flex items-center justify-between">
-              <Badge variant={binance?.connected ? "success" : "secondary"}>
-                {binance?.connected ? "Binance Connected" : "Binance Disconnected"}
-              </Badge>
-              {user && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{user.username}</span>
-                  <Button variant="ghost" size="icon" onClick={logout} title="Logout">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            {user && (
+              <div className="px-3 py-2 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{user.username}</span>
+                <Button variant="ghost" size="icon" onClick={logout} title="Logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </nav>
         </div>
       )}

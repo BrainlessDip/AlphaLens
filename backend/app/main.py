@@ -37,10 +37,8 @@ def create_app() -> FastAPI:
     )
 
     from app.api.router import api_router
-    from app.api.routes.metadata import router as metadata_router
 
     app.include_router(api_router)
-    app.include_router(metadata_router)
 
     return app
 
