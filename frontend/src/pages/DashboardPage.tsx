@@ -79,8 +79,8 @@ export function DashboardPage() {
           <CardContent>
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
-              <Badge variant={binance?.authenticated ? "success" : "secondary"}>
-                {binance?.authenticated ? "Connected" : "Disconnected"}
+              <Badge variant={binance?.connected ? "success" : "secondary"}>
+                {binance?.connected ? "Connected" : "Disconnected"}
               </Badge>
             </div>
           </CardContent>

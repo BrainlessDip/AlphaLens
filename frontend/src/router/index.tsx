@@ -5,11 +5,26 @@ import { ChatPage } from "@/pages/ChatPage"
 import { AnalyzePage } from "@/pages/AnalyzePage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { BinanceCallbackPage } from "@/pages/BinanceCallbackPage"
+import { LoginPage } from "@/pages/LoginPage"
+import { RegisterPage } from "@/pages/RegisterPage"
+import { AuthGuard } from "@/components/auth/AuthGuard"
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+  },
+  {
     path: "/",
-    element: <AppLayout />,
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "chat", element: <ChatPage /> },

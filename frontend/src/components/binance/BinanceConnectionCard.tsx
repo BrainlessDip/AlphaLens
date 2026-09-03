@@ -25,18 +25,20 @@ export function BinanceConnectionCard() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Binance Account</CardTitle>
-          <Badge variant={status?.authenticated ? "success" : "secondary"}>
-            {status?.authenticated ? "Connected" : "Not connected"}
+          <Badge variant={status?.connected ? "success" : "secondary"}>
+            {status?.connected ? "Connected" : "Not connected"}
           </Badge>
         </div>
         <CardDescription>
-          {status?.authenticated
+          {status?.connected
             ? "Your Binance account is linked for market data access."
-            : "Connect your Binance account to access market intelligence."}
+            : status?.needs_reauth
+              ? "Connection expired. Please reconnect your Binance account."
+              : "Connect your Binance account to access market intelligence."}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {status?.authenticated ? (
+        {status?.connected || status?.needs_reauth ? (
           <Button
             variant="outline"
             size="sm"
@@ -48,7 +50,7 @@ export function BinanceConnectionCard() {
           </Button>
         ) : (
           <Button size="sm">
-            <a href={getBinanceAuthUrl()}>
+            <a href={getBinanceAuthUrl()} className="flex items-center gap-2">
               <ExternalLink className="h-4 w-4" />
               Connect Binance
             </a>

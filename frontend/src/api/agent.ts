@@ -1,11 +1,19 @@
 import type { AnalyzeRequest, AnalyzeResponse, ChatRequest, SSEEvent } from "@/types/api"
 
+function getToken(): string | null {
+  return localStorage.getItem("auth_token")
+}
+
 export async function analyzeMarket(
   request: AnalyzeRequest
 ): Promise<AnalyzeResponse> {
+  const token = getToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
   const res = await fetch("/api/v1/agent/analyze", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(request),
   })
 
@@ -21,9 +29,13 @@ export async function* streamChat(
   request: ChatRequest,
   signal?: AbortSignal
 ): AsyncGenerator<SSEEvent> {
+  const token = getToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
   const res = await fetch("/api/v1/agent/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(request),
     signal,
   })

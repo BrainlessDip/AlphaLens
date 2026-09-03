@@ -1,9 +1,21 @@
+export interface AuthUser {
+  username: string
+  token: string
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+}
+
 export interface HealthResponse {
   status: string
 }
 
 export interface BinanceAuthStatus {
-  authenticated: boolean
+  connected: boolean
+  expires_at: string | null
+  needs_reauth: boolean
 }
 
 export interface AnalyzeRequest {

@@ -10,7 +10,7 @@ export function BinanceCallbackPage() {
 
   useEffect(() => {
     if (!isLoading && status) {
-      if (status.authenticated) {
+      if (status.connected) {
         navigate("/settings", { replace: true })
       } else {
         setError("Binance connection failed. Please try connecting again.")

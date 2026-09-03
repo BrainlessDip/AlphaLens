@@ -6,6 +6,7 @@ export function useBinanceStatus() {
     queryKey: ["binance-status"],
     queryFn: getBinanceStatus,
     refetchInterval: 60_000,
+    retry: false,
   })
 }
 
