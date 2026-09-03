@@ -57,8 +57,8 @@ async def test_chat_streaming_response(client: AsyncClient, mock_provider: Magic
 
     app.dependency_overrides[get_provider] = override_get_provider
 
-    with patch("app.api.routes.agent.market_agent") as mock_agent:
-        mock_agent.run_stream = fake_run_stream
+    with patch("app.api.routes.agent.get_market_agent") as mock_get_agent:
+        mock_get_agent.return_value.run_stream = fake_run_stream
         response = await client.post(
             "/api/v1/agent/chat",
             json={"message": "What is the BTC price?"},
@@ -83,8 +83,8 @@ async def test_analyze_endpoint(client: AsyncClient, mock_provider: MagicMock) -
 
     app.dependency_overrides[get_provider] = override_get_provider
 
-    with patch("app.api.routes.agent.market_agent") as mock_agent:
-        mock_agent.run = fake_run
+    with patch("app.api.routes.agent.get_market_agent") as mock_get_agent:
+        mock_get_agent.return_value.run = fake_run
         response = await client.post(
             "/api/v1/agent/analyze",
             json={"symbol": "BTCUSDT", "question": "Why has BTC moved?"},

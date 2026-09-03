@@ -8,7 +8,6 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
-    "pydantic-ai>=0.1.0",
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.21.0",
     "httpx>=0.28.0",
@@ -17,6 +16,7 @@ dependencies = [
     "alembic>=1.19.1",
     "pyjwt>=2.13.0",
     "bcrypt>=5.0.0",
+    "pydantic-ai-slim[openrouter]>=2.37.0",
 ]
 
 [dependency-groups]

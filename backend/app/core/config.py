@@ -12,9 +12,13 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     database_url: str = "sqlite+aiosqlite:///./app.db"
-    llm_api_key: str = ""
-    llm_model: str = "gpt-4o"
     frontend_url: str = "http://localhost:5173"
+
+    # OpenRouter (LLM provider, backend-only)
+    openrouter_api_key: str = ""
+    openrouter_model: str = "openai/gpt-4o-mini"
+    openrouter_app_url: str = ""
+    openrouter_app_title: str = ""
 
     # JWT
     jwt_secret_key: str = "dev-secret-change-in-production-use-64-chars-minimum-for-sha256"

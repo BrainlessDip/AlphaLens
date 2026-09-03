@@ -1,5 +1,4 @@
 import logging
-from dataclasses import dataclass
 
 from pydantic_ai import RunContext
 
@@ -12,14 +11,9 @@ from app.agent.analysis import (
     volatility_pct,
     volume_summary,
 )
-from app.binance.client import BinanceRESTProvider
+from app.agent.dependencies import AgentDeps
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class AgentDeps:
-    provider: BinanceRESTProvider
 
 
 async def get_ticker(ctx: RunContext[AgentDeps], symbol: str) -> str:

@@ -1,14 +1,18 @@
+import asyncio
 import json
 import logging
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
+from pydantic_ai.exceptions import ModelHTTPError, UserError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.agent.agent import market_agent
-from app.agent.tools import AgentDeps
+from app.agent.agent import get_market_agent, log_run_summary, summarize_run
+from app.agent.dependencies import AgentDeps
 from app.binance.client import BinanceRESTProvider
+from app.core.config import get_settings
 from app.core.exceptions import AgentError, BinanceAPIError
 from app.db.database import get_session
 from app.db.models import Conversation, Message
@@ -27,6 +31,27 @@ async def get_provider() -> BinanceRESTProvider:
     return _provider
 
 
+def map_provider_error(e: Exception) -> AgentError:
+    """Map LLM provider failures to clean API errors (never leak keys or internals)."""
+    if isinstance(e, UserError):
+        return AgentError("LLM provider is not configured. Set OPENROUTER_API_KEY on the server.")
+    if isinstance(e, ModelHTTPError):
+        if e.status_code == 401:
+            return AgentError("LLM provider authentication failed. Check server configuration.")
+        if e.status_code == 429:
+            return AgentError("LLM provider rate limit reached. Please try again shortly.")
+        if e.status_code == 404:
+            return AgentError("Configured LLM model is unavailable.")
+        return AgentError(f"LLM provider error (HTTP {e.status_code}). Please try again later.")
+    if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
+        return AgentError("LLM request timed out. Please try again.")
+    return AgentError("Analysis failed. Please try again later.")
+
+
+def _model_name() -> str:
+    return get_settings().openrouter_model
+
+
 @router.post("/chat", summary="Chat with market agent (SSE stream)")
 async def chat(
     request: ChatRequest,
@@ -42,17 +67,27 @@ async def chat(
     await session.commit()
 
     deps = AgentDeps(provider=provider)
+    model_name = _model_name()
 
     async def event_generator() -> dict[str, str]:
         full_response = []
+        start = time.monotonic()
         try:
-            async with market_agent.run_stream(request.message, deps=deps) as stream:
+            async with get_market_agent().run_stream(request.message, deps=deps) as stream:
                 async for text in stream.stream_text(delta=True):
                     full_response.append(text)
                     yield {"event": "message", "data": json.dumps({"type": "token", "content": text})}
+            try:
+                log_run_summary(summarize_run(stream, time.monotonic() - start, model_name), "chat")
+            except Exception:
+                pass
+        except (asyncio.CancelledError, GeneratorExit):
+            logger.info("Chat stream cancelled by client")
+            return
         except Exception as e:
-            logger.error("Agent stream error: %s", e)
-            yield {"event": "error", "data": json.dumps({"type": "error", "message": str(e)})}
+            err = map_provider_error(e)
+            logger.error("Agent stream error: %s: %s", type(e).__name__, err.message)
+            yield {"event": "error", "data": json.dumps({"type": "error", "message": err.message})}
             return
 
         complete_text = "".join(full_response)
@@ -81,12 +116,18 @@ async def analyze(
     deps = AgentDeps(provider=provider)
     prompt = f"Analyze {symbol} market conditions. {request.question}"
 
+    start = time.monotonic()
     try:
-        result = await market_agent.run(prompt, deps=deps)
+        result = await get_market_agent().run(prompt, deps=deps)
         analysis = result.output
+        try:
+            log_run_summary(summarize_run(result, time.monotonic() - start, _model_name()), "analyze")
+        except Exception:
+            pass
     except Exception as e:
-        logger.error("Agent error for %s: %s", symbol, e)
-        raise AgentError(f"Analysis failed: {e}")
+        err = map_provider_error(e)
+        logger.error("Agent error for %s: %s: %s", symbol, type(e).__name__, err.message)
+        raise err
 
     observations = []
     if stats.price_change_percent > 5:
