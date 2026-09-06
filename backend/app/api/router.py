@@ -3,8 +3,10 @@ from fastapi import APIRouter
 from app.api.routes.health import router as health_router
 from app.api.routes.agent import router as agent_router
 from app.api.routes.auth import router as user_auth_router
+from app.api.routes.chats import router as chats_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health_router)
 api_router.include_router(agent_router)
 api_router.include_router(user_auth_router)
+api_router.include_router(chats_router)

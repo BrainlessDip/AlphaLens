@@ -3,10 +3,12 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+from fastapi import Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.db.database import get_session
 from app.db.models import User
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,14 @@ async def get_current_user(
         raise AuthRequiredError()
 
     return user
+
+
+async def current_user_dep(
+    authorization: str | None = Header(default=None),
+    session: AsyncSession = Depends(get_session),
+) -> User:
+    """FastAPI dependency: current authenticated user (401 otherwise)."""
+    return await get_current_user(authorization, session)
 
 
 async def register_user(session: AsyncSession, username: str, password: str) -> User:

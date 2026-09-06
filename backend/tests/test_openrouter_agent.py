@@ -32,7 +32,7 @@ class TestOpenRouterWiring:
         assert agent.model.model_name == "openai/gpt-4o-mini"
 
     def test_default_model(self) -> None:
-        assert Settings(openrouter_api_key="k").openrouter_model == "openai/gpt-4o-mini"
+        assert Settings.model_fields["openrouter_model"].default == "openai/gpt-4o-mini"
 
     def test_all_binance_tools_registered(self) -> None:
         agent = build_market_agent(_settings())

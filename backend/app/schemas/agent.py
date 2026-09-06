@@ -1,8 +1,22 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4096, description="Natural language market question")
+    chat_id: str | None = Field(default=None, description="Existing conversation ID to continue")
+
+
+class MarketDataEvent(BaseModel):
+    """Structured market data emitted via SSE for the UI card."""
+    type: Literal["market_data"] = "market_data"
+    symbol: str
+    price: float
+    change_pct: float | None = None
+    volume_24h: float = 0.0
+    quote_volume_24h: float = 0.0
+    timestamp: str
 
 
 class AnalyzeRequest(BaseModel):

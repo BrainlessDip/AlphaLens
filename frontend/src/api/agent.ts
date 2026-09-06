@@ -1,4 +1,12 @@
-import type { AnalyzeRequest, AnalyzeResponse, ChatRequest, SSEEvent } from "@/types/api"
+import type {
+  AnalyzeRequest,
+  AnalyzeResponse,
+  ChatRequest,
+  SSEEvent,
+  SSEFrame,
+  SSEKnownEvent,
+  SSEUnknown,
+} from "@/types/api"
 
 function getToken(): string | null {
   return localStorage.getItem("auth_token")
@@ -28,7 +36,7 @@ export async function analyzeMarket(
 export async function* streamChat(
   request: ChatRequest,
   signal?: AbortSignal
-): AsyncGenerator<SSEEvent> {
+): AsyncGenerator<SSEFrame> {
   const token = getToken()
   const headers: Record<string, string> = { "Content-Type": "application/json" }
   if (token) headers["Authorization"] = `Bearer ${token}`
@@ -50,6 +58,39 @@ export async function* streamChat(
 
   const decoder = new TextDecoder()
   let buffer = ""
+  let eventType = ""
+  let dataLines: string[] = []
+
+  const KNOWN_TYPES = new Set<string>([
+    "message_start",
+    "tool_start",
+    "tool_complete",
+    "assistant_delta",
+    "message_complete",
+    "market_data",
+    "error",
+  ])
+
+  function* flush(): Generator<SSEFrame> {
+    if (eventType && dataLines.length > 0) {
+      const raw = dataLines.join("\n")
+      try {
+        const parsed = JSON.parse(raw)
+        if (typeof parsed === "object" && parsed !== null && typeof parsed.type === "string") {
+          const event = parsed as SSEEvent
+          if (KNOWN_TYPES.has(event.type)) {
+            yield { known: true, event: event as SSEKnownEvent }
+          } else {
+            yield { known: false, event: event as SSEUnknown }
+          }
+        }
+      } catch {
+        // skip malformed JSON
+      }
+    }
+    eventType = ""
+    dataLines = []
+  }
 
   try {
     while (true) {
@@ -60,22 +101,26 @@ export async function* streamChat(
       const lines = buffer.split("\n")
       buffer = lines.pop() || ""
 
-      let eventType = ""
-      for (const line of lines) {
-        if (line.startsWith("event:")) {
+      for (const rawLine of lines) {
+        const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine
+        if (line === "") {
+          yield* flush()
+        } else if (line.startsWith("event:")) {
+          yield* flush()
           eventType = line.slice(6).trim()
         } else if (line.startsWith("data:")) {
-          const data = line.slice(5).trim()
-          if (eventType === "message" || eventType === "error") {
-            try {
-              yield JSON.parse(data) as SSEEvent
-            } catch {
-              // skip malformed JSON
-            }
-          }
+          dataLines.push(line.slice(5).trimStart())
         }
+        // ignore SSE comments (:...) and unknown fields
       }
     }
+    if (buffer.trim() !== "") {
+      const line = buffer.endsWith("\r") ? buffer.slice(0, -1) : buffer
+      if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trimStart())
+      }
+    }
+    yield* flush()
   } finally {
     reader.releaseLock()
   }

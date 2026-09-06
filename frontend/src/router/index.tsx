@@ -1,11 +1,11 @@
-import { createBrowserRouter } from "react-router"
+import { createBrowserRouter, Navigate } from "react-router"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { DashboardPage } from "@/pages/DashboardPage"
 import { ChatPage } from "@/pages/ChatPage"
 import { AnalyzePage } from "@/pages/AnalyzePage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
+import { SharedChatPage } from "@/pages/SharedChatPage"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 
 export const router = createBrowserRouter([
@@ -18,6 +18,10 @@ export const router = createBrowserRouter([
     element: <RegisterPage />,
   },
   {
+    path: "/shared/:chatId",
+    element: <SharedChatPage />,
+  },
+  {
     path: "/",
     element: (
       <AuthGuard>
@@ -25,10 +29,19 @@ export const router = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
-      { index: true, element: <DashboardPage /> },
-      { path: "chat", element: <ChatPage /> },
+      { index: true, element: <Navigate to="/chat" replace /> },
       { path: "analyze", element: <AnalyzePage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
+  },
+  {
+    // Optional param keeps ChatPage mounted when a new chat gets its id,
+    // so an in-flight first-message stream is never aborted by a remount.
+    path: "/chat/:chatId?",
+    element: (
+      <AuthGuard>
+        <ChatPage />
+      </AuthGuard>
+    ),
   },
 ])

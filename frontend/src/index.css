@@ -56,3 +56,60 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+.markdown-content pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-content .hljs {
+  color: #e2e8f0;
+}
+
+.markdown-content .hljs-keyword,
+.markdown-content .hljs-selector-tag,
+.markdown-content .hljs-literal,
+.markdown-content .hljs-section,
+.markdown-content .hljs-link {
+  color: #c084fc;
+}
+
+.markdown-content .hljs-function .hljs-keyword {
+  color: #c084fc;
+}
+
+.markdown-content .hljs-string,
+.markdown-content .hljs-title,
+.markdown-content .hljs-name,
+.markdown-content .hljs-type,
+.markdown-content .hljs-attribute,
+.markdown-content .hljs-symbol,
+.markdown-content .hljs-bullet,
+.markdown-content .hljs-addition,
+.markdown-content .hljs-variable,
+.markdown-content .hljs-template-tag,
+.markdown-content .hljs-template-variable {
+  color: #86efac;
+}
+
+.markdown-content .hljs-comment,
+.markdown-content .hljs-quote,
+.markdown-content .hljs-deletion,
+.markdown-content .hljs-meta {
+  color: #71717a;
+}
+
+.markdown-content .hljs-number,
+.markdown-content .hljs-regexp,
+.markdown-content .hljs-literal,
+.markdown-content .hljs-params {
+  color: #fbbf24;
+}
+
+.markdown-content .hljs-built_in {
+  color: #67e8f9;
+}
+
+.markdown-content .hljs-title.function_ {
+  color: #93c5fd;
+}

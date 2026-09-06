@@ -1,5 +1,6 @@
 from typing import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -87,3 +88,15 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def auth_headers(client: AsyncClient) -> dict[str, str]:
+    username = f"user_{uuid4().hex[:8]}"
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"username": username, "password": "password123"},
+    )
+    assert resp.status_code == 200
+    token = resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

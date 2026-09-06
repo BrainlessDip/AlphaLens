@@ -27,5 +27,9 @@ export async function apiFetch<T>(
     throw error || { error: { code: "UNKNOWN", message: `HTTP ${res.status}` } }
   }
 
+  if (res.status === 204) {
+    return undefined as T
+  }
+
   return res.json()
 }

@@ -1,12 +1,11 @@
 import { Link, useLocation } from "react-router"
-import { LayoutDashboard, MessageSquare, BarChart3, Settings, Menu, X, LogOut } from "lucide-react"
+import { MessageSquare, BarChart3, Settings, Menu, X, LogOut } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/analyze", label: "Analyze", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -26,21 +25,25 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                location.pathname === item.to
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive =
+              item.to === "/chat"
+                ? location.pathname.startsWith("/chat")
+                : location.pathname === item.to
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                  isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="flex-1" />

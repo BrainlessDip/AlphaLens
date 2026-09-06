@@ -12,3 +12,5 @@ class ErrorResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str = "ok"
+    model: str | None = None
+    binance_status: str | None = None

@@ -1,38 +1,36 @@
-import { MessageSquare, BarChart3, TrendingUp, GitCompare } from "lucide-react"
+import { BarChart3 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-const prompts = [
-  { text: "Why is BTC moving?", icon: TrendingUp },
-  { text: "Analyze ETH momentum", icon: BarChart3 },
-  { text: "What changed in the market today?", icon: MessageSquare },
-  { text: "Compare BTC and ETH", icon: GitCompare },
+const SUGGESTIONS = [
+  "Analyze BTC right now",
+  "What is the current ETH trend?",
+  "Compare BTC 1h vs 4h momentum",
+  "What are the biggest market movers?",
 ]
 
-interface ChatEmptyStateProps {
-  onPrompt: (prompt: string) => void
-}
-
-export function ChatEmptyState({ onPrompt }: ChatEmptyStateProps) {
+export function ChatEmptyState({ onPrompt }: { onPrompt: (prompt: string) => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-        <MessageSquare className="h-8 w-8 text-primary" />
-      </div>
-      <div className="text-center">
-        <h2 className="text-xl font-semibold">Market Intelligence Agent</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ask questions about crypto markets. The agent will fetch real-time data from Binance.
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 px-4 py-12 text-center">
+      <div>
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+          <BarChart3 className="h-6 w-6 text-primary" />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">AlphaLens</h1>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          Your AI market intelligence assistant. Ask about markets, trends, volatility,
+          momentum, and Binance market data.
         </p>
       </div>
-      <div className="grid w-full max-w-md gap-2 sm:grid-cols-2">
-        {prompts.map((p) => (
-          <button
-            key={p.text}
-            onClick={() => onPrompt(p.text)}
-            className="flex items-center gap-2 rounded-lg border bg-secondary/50 px-4 py-3 text-left text-sm transition-colors hover:bg-secondary"
+      <div className="grid w-full gap-2 sm:grid-cols-2">
+        {SUGGESTIONS.map((suggestion) => (
+          <Button
+            key={suggestion}
+            variant="outline"
+            className="h-auto justify-start whitespace-normal px-4 py-3 text-left text-sm font-normal"
+            onClick={() => onPrompt(suggestion)}
           >
-            <p.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-            {p.text}
-          </button>
+            {suggestion}
+          </Button>
         ))}
       </div>
     </div>

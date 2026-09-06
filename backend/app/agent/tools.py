@@ -16,6 +16,23 @@ from app.agent.dependencies import AgentDeps
 logger = logging.getLogger(__name__)
 
 
+def tool_label(tool_name: str, args: dict | None = None) -> str:
+    """Safe, human-readable label for a tool call. Only name + safe scalar args."""
+    args = args or {}
+    symbol = str(args.get("symbol", "")).upper() or None
+    interval = str(args.get("interval", "") or "")
+    labels = {
+        "get_ticker": f"Getting {symbol} price" if symbol else "Getting current price",
+        "get_24h_stats": f"Checking {symbol} 24h statistics" if symbol else "Checking 24h statistics",
+        "get_klines": f"Reading {symbol} {interval} candles".strip() if symbol else "Reading market candles",
+        "get_order_book": f"Checking {symbol} order book" if symbol else "Checking order book",
+        "get_recent_trades": f"Reading {symbol} recent trades" if symbol else "Reading recent trades",
+        "get_exchange_info": "Checking available symbols",
+        "get_indicators": f"Analyzing {symbol} indicators".strip() if symbol else "Analyzing indicators",
+    }
+    return labels.get(tool_name, f"Running {tool_name}")
+
+
 async def get_ticker(ctx: RunContext[AgentDeps], symbol: str) -> str:
     """Get current price for a trading pair. Example: BTCUSDT, ETHUSDT"""
     try:

@@ -1,161 +1,163 @@
-import { useState, useRef, useEffect, useCallback } from "react"
-import { useSearchParams } from "react-router"
-import { ChatMessage } from "@/components/chat/ChatMessage"
-import { ChatInput } from "@/components/chat/ChatInput"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useNavigate, useParams } from "react-router"
+import { ChatLayout } from "@/components/chat/ChatLayout"
+import { ChatHeader } from "@/components/chat/ChatHeader"
+import { ChatMessages } from "@/components/chat/ChatMessages"
+import { ChatComposer } from "@/components/chat/ChatComposer"
 import { ChatEmptyState } from "@/components/chat/ChatEmptyState"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { streamChat } from "@/api/agent"
+import { ChatSuggestions } from "@/components/chat/ChatSuggestions"
+import { CommandMenu } from "@/components/chat/CommandMenu"
+import { useChatMessages } from "@/hooks/useChatMessages"
+import { EMPTY_STREAM, toDisplayMessages, useChatStream } from "@/hooks/useChatStream"
+import { useChatHistory } from "@/hooks/useChatHistory"
+import type { ChatMessage as ChatMessageType } from "@/types/api"
 
-interface Message {
-  role: "user" | "assistant"
-  content: string
-}
+const FOLLOW_UPS = [
+  "Compare with ETH",
+  "Show the 4h trend",
+  "Explain the indicators",
+  "What could invalidate this view?",
+]
 
 export function ChatPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const { chatId } = useParams<{ chatId?: string }>()
+  const navigate = useNavigate()
+  const { data: detail, isLoading, refetch } = useChatMessages(chatId)
+  const { data: history } = useChatHistory()
+  const { isStreaming, active, send, stop, reset } = useChatStream()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const composerKey = `composer-${chatId ?? "new"}`
 
-  const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [])
+  const persisted: ChatMessageType[] = (detail?.messages ?? []).map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    createdAt: m.created_at,
+    status: m.status === "streaming" ? "streaming" : "completed",
+  }))
+
+  const showActive =
+    isStreaming ||
+    (active.content !== "" ||
+      active.streamEvents.length > 0 ||
+      active.error !== null)
+  const messages = showActive
+    ? toDisplayMessages(
+        persisted,
+        active.chatId === (chatId ?? null) || !chatId
+          ? active
+          : { ...EMPTY_STREAM },
+        isStreaming
+      )
+    : persisted
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [messages.length, messages[messages.length - 1]?.content])
+
+  // Abort an in-flight stream if the user switches conversation.
+  const prevChatId = useRef(chatId)
+  useEffect(() => {
+    if (prevChatId.current !== chatId) {
+      prevChatId.current = chatId
+      if (!isStreaming) {
+        stop()
+        reset()
+      }
+    }
+  }, [chatId, stop, reset, isStreaming])
+
+  // Cleanup: abort any ongoing stream when component unmounts
+  useEffect(() => {
+    return () => {
+      stop()
+    }
+  }, [stop])
 
   const handleSend = useCallback(
     async (message: string) => {
-      setError(null)
-      setMessages((prev) => [...prev, { role: "user", content: message }])
-      setIsStreaming(true)
-
-      const controller = new AbortController()
-      abortRef.current = controller
-
-      let assistantContent = ""
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }])
-
-      try {
-        for await (const event of streamChat({ message }, controller.signal)) {
-          if (event.type === "token") {
-            assistantContent += event.content
-            setMessages((prev) => {
-              const updated = [...prev]
-              updated[updated.length - 1] = { role: "assistant", content: assistantContent }
-              return updated
-            })
-          } else if (event.type === "error") {
-            setError(event.message)
-            setMessages((prev) => {
-              const updated = [...prev]
-              updated[updated.length - 1] = {
-                role: "assistant",
-                content: `Error: ${event.message}`,
-              }
-              return updated
-            })
-          }
-        }
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          // User cancelled
-        } else {
-          const errMsg = err instanceof Error ? err.message : "Stream failed"
-          setError(errMsg)
-          setMessages((prev) => {
-            const updated = [...prev]
-            updated[updated.length - 1] = {
-              role: "assistant",
-              content: `Error: ${errMsg}`,
-            }
-            return updated
-          })
-        }
-      } finally {
-        setIsStreaming(false)
-        abortRef.current = null
+      const result = await send(message, chatId ?? null, (id) => {
+        navigate(`/chat/${id}`, { replace: true })
+      })
+      if (result.chatId) {
+        await refetch()
       }
+      reset()
     },
-    []
+    [send, chatId, navigate, reset, refetch]
   )
 
-  const handleStop = () => {
-    abortRef.current?.abort()
-    setIsStreaming(false)
-  }
+  const handleNewChat = useCallback(() => {
+    stop()
+    reset()
+    navigate("/chat")
+  }, [stop, reset, navigate])
 
-  const handleClear = () => {
-    setMessages([])
-    setError(null)
-  }
+  const handleFocusComposer = useCallback(() => {
+    composerRef.current?.focus()
+  }, [])
 
-  // Handle URL query param
-  useEffect(() => {
-    const q = searchParams.get("q")
-    if (q) {
-      setSearchParams({}, { replace: true })
-      handleSend(q)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const handleSelect = useCallback(
+    (id: string) => {
+      navigate(`/chat/${id}`)
+    },
+    [navigate]
+  )
+
+  const lastUserMessage = [...persisted].reverse().find((m) => m.role === "user")?.content
+  const lastMessage = persisted[persisted.length - 1]
+  const showFollowUps =
+    !isStreaming &&
+    !active.error &&
+    lastMessage?.role === "assistant" &&
+    lastMessage.content !== ""
+
+  const title =
+    detail?.title ??
+    history?.items.find((c) => c.id === chatId)?.title ??
+    (chatId ? "Chat" : undefined)
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div>
-          <h1 className="text-lg font-semibold">Market Intelligence</h1>
-          <p className="text-xs text-muted-foreground">
-            {messages.length > 0 ? `${messages.length} messages` : "Ask anything about the market"}
-          </p>
-        </div>
-        {messages.length > 0 && (
-          <button
-            onClick={handleClear}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            Clear conversation
-          </button>
+    <ChatLayout activeChatId={chatId} onSelect={handleSelect} onNewChat={handleNewChat} collapsed={!sidebarOpen}>
+      <ChatHeader
+        title={title}
+        activeChatId={chatId}
+        onSelect={handleSelect}
+        onNewChat={handleNewChat}
+      />
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        {persisted.length === 0 && !showActive && !isLoading ? (
+          <ChatEmptyState onPrompt={handleSend} />
+        ) : (
+          <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
+            error={active.error}
+            chatId={chatId}
+            onRetry={lastUserMessage ? () => handleSend(lastUserMessage) : undefined}
+            onRegenerate={handleSend}
+          />
         )}
       </div>
-
-      {messages.length === 0 ? (
-        <ChatEmptyState onPrompt={handleSend} />
-      ) : (
-        <ScrollArea className="flex-1">
-          <div ref={scrollRef} className="space-y-4 p-4">
-            {messages.map((msg, i) => (
-              <ChatMessage key={i} role={msg.role} content={msg.content} />
-            ))}
-            {isStreaming && messages[messages.length - 1]?.content === "" && (
-              <div className="flex gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <div className="h-4 w-4 animate-pulse rounded-full bg-primary" />
-                </div>
-                <div className="rounded-lg bg-secondary px-4 py-3">
-                  <div className="flex gap-1">
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+      {showFollowUps && (
+        <ChatSuggestions suggestions={FOLLOW_UPS} onSelect={handleSend} />
       )}
-
-      {error && (
-        <div className="border-t border-destructive/50 bg-destructive/5 px-4 py-2 text-xs text-destructive">
-          {error}
-        </div>
-      )}
-
-      <ChatInput onSend={handleSend} isLoading={isStreaming} onStop={handleStop} />
-    </div>
+      <ChatComposer
+        key={composerKey}
+        draftKey={composerKey}
+        onSend={handleSend}
+        isStreaming={isStreaming}
+        onStop={stop}
+        autoFocus={persisted.length === 0}
+      />
+      <CommandMenu
+        onNewChat={handleNewChat}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onFocusComposer={handleFocusComposer}
+      />
+    </ChatLayout>
   )
 }

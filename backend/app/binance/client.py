@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Protocol
 
@@ -173,6 +174,17 @@ class BinanceRESTProvider:
             return ExchangeInfo(timezone=data.get("timezone", "UTC"), trading_symbols=symbols)
         except (TypeError, ValueError) as e:
             raise BinanceAPIError("Malformed exchange info response") from e
+
+    async def get_market_snapshot(
+        self, symbol: str, klines_interval: str = "1h", klines_limit: int = 24
+    ) -> dict:
+        """Fetch price + 24h stats + klines concurrently (independent requests)."""
+        symbol = _validate_symbol(symbol)
+        price_coro = self.get_ticker_price(symbol)
+        stats_coro = self.get_ticker_24h(symbol)
+        klines_coro = self.get_klines(symbol, klines_interval, klines_limit)
+        ticker, stats, klines = await asyncio.gather(price_coro, stats_coro, klines_coro)
+        return {"ticker": ticker, "stats_24h": stats, "klines": klines}
 
     async def close(self) -> None:
         await self._client.aclose()
