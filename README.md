@@ -33,7 +33,7 @@ No database installation needed. SQLite is embedded.
 ## Project Structure
 
 ```
-Binance/
+AlphaLens/
 ├── backend/
 │   ├── app/
 │   │   ├── agent/          # AI agent logic, tools, prompts
@@ -70,8 +70,8 @@ Binance/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Binance.git
-cd Binance
+git clone https://github.com/BrainlessDip/AlphaLens
+cd AlphaLens
 ```
 
 ### 2. Backend setup
@@ -345,9 +345,9 @@ The core idea is not to build another chatbot that simply generates financial te
 
 AlphaLens is an actual tool-using AI agent.
 
-The agent receives a user's question, determines what information is required, accesses the appropriate Binance capabilities through Binance Agent OS and its Agentic MCP interface, interprets the returned market information, and produces a structured explanation.
+The agent receives a user's question, determines what information is required, accesses the appropriate Binance capabilities through Binance Agent OS, interprets the returned market information, and produces a structured explanation.
 
-Binance Agent OS provides the connection between AI agents and Binance capabilities. Binance's current MCP server exposes market-data and trading capabilities, while Agent OS provides permission controls over what an agent can access.
+Binance Agent OS provides the connection between AI agents and Binance capabilities, exposing market-data and trading while providing permission controls over what an agent can access.
 
 AlphaLens focuses primarily on market intelligence and analysis rather than autonomous trading. This allows the project to demonstrate the core agent architecture while keeping the system focused, understandable, and safer.
 
@@ -394,7 +394,7 @@ Determine required information
       ↓
 Select Binance tools
       ↓
-Call Binance Agentic MCP
+Call Binance API
       ↓
 Receive live Binance data
       ↓
@@ -415,17 +415,9 @@ The AI agent decides how to investigate the question.
 
 Binance Agent OS is a platform and toolkit for connecting AI agents to Binance services.
 
-According to Binance, Agent OS allows AI agents to access capabilities including market data, account information, and supported trading functionality. The Binance MCP server currently provides market-data and trading capabilities, while other Agent OS integrations cover additional functionality.
+According to Binance, Agent OS allows AI agents to access capabilities including market data, account information, and supported trading functionality.
 
-The Binance MCP endpoint used by AlphaLens is:
-
-```text
-https://agent.binance.com/mcp/agentic
-```
-
-Binance describes this MCP endpoint as a way for compatible AI agents to connect to Binance through an authorization flow.
-
-This gives AlphaLens a standardized tool interface instead of requiring the application to independently implement every Binance API integration.
+Binance currently provides these capabilities through a standardized API, while other Agent OS integrations cover additional functionality.
 
 ---
 
@@ -433,9 +425,9 @@ This gives AlphaLens a standardized tool interface instead of requiring the appl
 
 The AI agent is the central component of AlphaLens.
 
-It is important to distinguish the AI agent from Binance Agent OS and MCP.
+It is important to distinguish the AI agent from Binance Agent OS.
 
-They are three different concepts.
+They are different concepts.
 
 ### AI Agent
 
@@ -451,12 +443,6 @@ It:
 * reasons over the collected information
 * produces the final response
 
-### MCP
-
-MCP is the tool interface.
-
-It allows the agent to interact with external capabilities through structured tool calls.
-
 ### Binance Agent OS
 
 Agent OS provides the Binance-side infrastructure that allows an authorized AI agent to interact with Binance capabilities.
@@ -466,9 +452,6 @@ Therefore:
 ```text
 LLM
 = Brain
-
-MCP
-= Tool interface / Hands
 
 Binance Agent OS
 = Binance agent infrastructure
@@ -523,10 +506,9 @@ The high-level architecture is:
                                    │
                                    ▼
                     ┌──────────────────────────────┐
-                    │ Binance Agentic MCP          │
+                    │         Binance API          │
                     │                              │
-                    │ https://agent.binance.com/   │
-                    │ mcp/agentic                  │
+                    │ Structured tool access       │
                     └──────────────┬───────────────┘
                                    │
                                    ▼
@@ -567,7 +549,7 @@ Yes
    ↓
 Select tool
    ↓
-Call Binance MCP
+Call Binance API
    ↓
 Receive result
    ↓
@@ -611,7 +593,7 @@ market activity
 recent market structure
 ```
 
-The agent then selects appropriate Binance tools through MCP.
+The agent then selects appropriate Binance tools.
 
 Conceptually:
 
@@ -627,7 +609,7 @@ AI Agent
  ├── Select market-data tools
  │
  ▼
-Binance MCP
+Binance API
  │
  ├── price data
  ├── volume data
@@ -649,56 +631,16 @@ The important point is that the agent decides which tools are relevant instead o
 
 ---
 
-# 7. Why MCP?
-
-Without MCP, AlphaLens would need to implement direct integrations for every Binance capability.
-
-That would create a tightly coupled system:
-
-```text
-AI
- ↓
-Custom Binance API wrapper
- ↓
-Endpoint A
-Endpoint B
-Endpoint C
-Endpoint D
-...
-```
-
-MCP provides a standardized tool interface.
-
-Conceptually:
-
-```text
-AI Agent
-    ↓
-MCP Client
-    ↓
-Binance MCP
-    ↓
-Binance Tools
-```
-
-This also means the agent can discover available tools rather than relying entirely on hardcoded tool indexes.
-
-The MCP ecosystem is also evolving toward a stateless HTTP protocol core, with the July 2026 specification emphasizing scalable request/response operation and moving away from legacy HTTP+SSE transport.
-
-Therefore AlphaLens should use the current Binance-supported MCP transport rather than assuming the older SSE transport.
-
----
-
 # 8. Tool Discovery
 
 AlphaLens does not permanently hard-code the number or ordering of Binance tools.
 
-Instead, the MCP client can discover the tools exposed by Binance.
+Instead, the client can discover the tools exposed by Binance.
 
 Conceptually:
 
 ```text
-MCP Server
+API Server
      │
      │ tools/list
      ▼
@@ -714,7 +656,7 @@ The agent can then select tools based on their names and schemas.
 
 This is important because the server-side tool catalogue can evolve.
 
-The application should therefore treat Binance MCP as the source of truth.
+The application should therefore treat Binance's tool catalogue as the source of truth.
 
 ---
 
@@ -749,7 +691,7 @@ Binance authorization
       ↓
 Binance access token
       ↓
-Binance MCP
+Binance API
 ```
 
 These should never be treated as the same credential.
@@ -820,7 +762,7 @@ Refresh Token
 Secure server-side storage
 ```
 
-MCP's current authorization direction also emphasizes OAuth 2.1-style authorization, PKCE, and Client ID Metadata Documents.
+The current authorization direction also emphasizes OAuth 2.1-style authorization, PKCE, and Client ID Metadata Documents.
 
 ---
 
@@ -875,7 +817,7 @@ metadata document URL
 
 rather than a traditional secret-based client registration.
 
-MCP's July 2026 specification specifically describes a shift toward Client ID Metadata Documents as the preferred registration model.
+The OAuth 2.1 specification specifically describes a shift toward Client ID Metadata Documents as the preferred registration model.
 
 ---
 
@@ -1010,10 +952,10 @@ BinanceConnection(user_id)
       ↓
 user's token
       ↓
-Binance MCP
+Binance API
 ```
 
-This guarantees that one user cannot accidentally execute MCP requests using another user's Binance authorization.
+This guarantees that one user cannot accidentally execute API requests using another user's Binance authorization.
 
 ---
 
@@ -1085,14 +1027,14 @@ Access tokens expire.
 
 Therefore AlphaLens supports refresh tokens when Binance provides them.
 
-Before an MCP request:
+Before an API request:
 
 ```text
 Is access token still valid?
         │
         ├── Yes
         │    ↓
-        │  MCP request
+        │  API request
         │
         └── No
              ↓
@@ -1102,7 +1044,7 @@ Is access token still valid?
              ↓
           Update database
              ↓
-          MCP request
+          API request
 ```
 
 The backend also handles the case where Binance returns:
@@ -1114,7 +1056,7 @@ The backend also handles the case where Binance returns:
 The recovery mechanism is:
 
 ```text
-MCP request
+API request
     ↓
 401
     ↓
@@ -1122,76 +1064,10 @@ Refresh token
     ↓
 Update stored credentials
     ↓
-Retry original MCP request once
+Retry original API request once
 ```
 
 There is deliberately no infinite retry loop.
-
----
-
-# 18. MCP Client
-
-AlphaLens contains a dedicated Binance MCP service.
-
-Conceptually:
-
-```text
-BinanceMCPClient
-```
-
-Its responsibilities include:
-
-```text
-initialize()
-list_tools()
-call_tool()
-```
-
-The client is responsible for:
-
-* MCP transport
-* request IDs
-* initialization
-* tool discovery
-* tool invocation
-* authorization headers
-* HTTP timeouts
-* error handling
-* MCP protocol errors
-
-OAuth logic remains separate.
-
-This gives the application a clean architecture:
-
-```text
-BinanceOAuthService
-        │
-        │ provides credentials
-        ▼
-BinanceMCPClient
-        │
-        │ provides tools
-        ▼
-AI Agent
-```
-
----
-
-# 19. Current MCP Transport
-
-AlphaLens does not assume the legacy SSE transport.
-
-Binance's current Agentic endpoint is:
-
-```text
-https://agent.binance.com/mcp/agentic
-```
-
-The MCP implementation follows the transport currently supported by Binance.
-
-This is important because the MCP specification has moved toward a stateless request/response HTTP architecture and has formally deprecated the legacy HTTP+SSE approach.
-
-The transport layer is therefore isolated so that future MCP protocol changes do not require rewriting the agent or OAuth architecture.
 
 ---
 
@@ -1219,7 +1095,7 @@ The backend responsibilities are:
 Authentication
 OAuth
 Token management
-MCP communication
+API communication
 Agent orchestration
 API responses
 Error handling
@@ -1323,7 +1199,7 @@ Authenticated user
    ↓
 AI Agent
    ↓
-Binance MCP
+Binance API
    ↓
 Tool results
    ↓
@@ -1334,7 +1210,7 @@ Streaming response
 React chat UI
 ```
 
-The frontend does not need to understand Binance's internal MCP tools.
+The frontend does not need to understand Binance's internal API tools.
 
 It only understands the agent interface.
 
@@ -1372,7 +1248,7 @@ AI Agent
       ↓
 Determine required market data
       ↓
-Binance MCP
+Binance API
       ↓
 Collect relevant information
       ↓
@@ -1478,7 +1354,7 @@ Tokens remain server-side.
 
 Every token is associated with an application user.
 
-### MCP requests
+### API requests
 
 Authenticated using:
 
@@ -1604,7 +1480,7 @@ Need:
 
 ### Step 3 — Select Tools
 
-Choose appropriate Binance MCP tools.
+Choose appropriate Binance API tools.
 
 ### Step 4 — Execute
 
@@ -1673,7 +1549,7 @@ Service unavailable
 Invalid tool request
 ```
 
-### MCP errors
+### API errors
 
 Examples:
 
@@ -1681,7 +1557,7 @@ Examples:
 Initialization failure
 Tool not found
 Invalid arguments
-MCP protocol error
+API error
 ```
 
 ### AI errors
@@ -1713,8 +1589,8 @@ state expiration
 state consumption
 token parsing
 token refresh
-MCP request construction
-MCP error handling
+API request construction
+API error handling
 ```
 
 ## Integration Tests
@@ -1726,7 +1602,7 @@ authorization
 callback
 token exchange
 refresh
-MCP initialization
+API initialization
 tool discovery
 tool invocation
 ```
@@ -1797,7 +1673,7 @@ The complete AlphaLens experience is:
                         │
                         ▼
                  ┌─────────────┐
-                 │ Binance MCP │
+                 │ Binance API │
                  └──────┬──────┘
                         │
                         ▼
@@ -1839,7 +1715,7 @@ Then decides it needs current Binance market information.
 
 ### Tool layer
 
-The agent calls the appropriate Binance MCP tools.
+The agent calls the appropriate Binance API tools.
 
 ### Binance
 
@@ -1912,13 +1788,13 @@ Generate answer
 
 The agent can therefore interact with an external environment.
 
-This follows the fundamental MCP model where AI agents use structured tools to interact with external services.
+This follows the fundamental agentic model where AI agents use structured tools to interact with external services.
 
 ---
 
 # 36. Why FastAPI?
 
-FastAPI provides a lightweight orchestration layer between the frontend, AI model, OAuth system, database, and Binance MCP.
+FastAPI provides a lightweight orchestration layer between the frontend, AI model, OAuth system, database, and Binance API.
 
 It provides:
 
@@ -1936,7 +1812,7 @@ Routes
   ↓
 Services
   ↓
-Database / MCP / AI
+Database / API / AI
 ```
 
 This avoids putting business logic directly inside frontend components.
@@ -1988,7 +1864,7 @@ A production deployment can use:
                     ┌────────┴────────┐
                     │                 │
                     ▼                 ▼
-                 Database          Binance MCP
+                 Database          Binance API
                                       │
                                       ▼
                                    Binance
@@ -2007,8 +1883,6 @@ Deployment-specific settings are provided through environment variables.
 Conceptually:
 
 ```text
-BINANCE_MCP_URL=https://agent.binance.com/mcp/agentic
-
 BINANCE_OAUTH_AUTHORIZATION_URL=https://accounts.binance.com/agentic-oauth/authorize
 
 BINANCE_OAUTH_TOKEN_URL=https://accounts.binance.com/oauth-agentic/token
@@ -2026,14 +1900,13 @@ No traditional Binance API secret is required for this Agentic OAuth architectur
 
 # 40. Important Design Principle: Don't Guess Binance Protocol Behavior
 
-Because Agent OS and MCP are actively evolving, AlphaLens does not assume undocumented behavior.
+Because Agent OS and Binance's API capabilities are actively evolving, AlphaLens does not assume undocumented behavior.
 
 Whenever protocol behavior is unclear, the implementation checks:
 
 ```text
 OAuth metadata
 Protected Resource metadata
-MCP protocol
 Binance documentation
 Actual server behavior
 ```
@@ -2046,7 +1919,6 @@ redirect URI rules
 client metadata
 scopes
 token refresh
-MCP headers
 tool schemas
 ```
 
@@ -2170,7 +2042,7 @@ Binance authorization
         ≠
 AI reasoning
         ≠
-MCP transport
+API transport
 ```
 
 Each layer has a clear responsibility.
@@ -2215,7 +2087,7 @@ AlphaLens can be summarized as:
                         │
                         ▼
 ┌───────────────────────────────────────────────────┐
-│              BINANCE AGENTIC MCP                  │
+│              BINANCE API                          │
 │                                                   │
 │ Structured external tools                         │
 └───────────────────────┬───────────────────────────┘
@@ -2241,8 +2113,6 @@ LLM
 +
 Agent reasoning
 +
-MCP
-+
 Binance Agent OS
 +
 OAuth
@@ -2254,7 +2124,7 @@ React
 
 The AI model acts as the reasoning engine.
 
-Binance Agentic MCP provides structured access to Binance capabilities.
+Binance provides structured access to market data and trading capabilities.
 
 OAuth provides user authorization.
 
