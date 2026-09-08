@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Bot, Check, Copy, FileText, Info, RefreshCw, Share2 } from "lucide-react"
+import { Bot, Check, Copy, FileText, Info, RefreshCw, Share2, FlaskConical, CircleAlert } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Message, MessageAvatar, MessageContent, MessageFooter } from "@/components/ui/message"
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { createShare } from "@/api/chats"
 import { MarkdownMessage } from "./MarkdownMessage"
+import { useBinanceStatus } from "@/hooks/useBinanceStatus"
 import { cn, formatPrice, formatVolume } from "@/lib/utils"
 import type {
   ChatMessage as ChatMessageType,
@@ -218,11 +219,14 @@ function sourcesFromMessage(message: ChatMessageType) {
 
 function SourceDrawer({ message }: { message: ChatMessageType }) {
   const { tools, symbols } = sourcesFromMessage(message)
+  const { data: binanceStatus } = useBinanceStatus()
   const timeframes = new Set<string>()
   for (const t of tools) {
     const m = t.label.match(/\b(1m|5m|15m|1h|4h|1d|1w)\b/i)
     if (m) timeframes.add(m[1].toLowerCase())
   }
+
+  const isTestnet = binanceStatus?.environment === "testnet"
 
   return (
     <Sheet>
@@ -236,6 +240,16 @@ function SourceDrawer({ message }: { message: ChatMessageType }) {
           <SheetTitle>How AlphaLens got this</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-4 text-sm">
+          <div className="flex items-center gap-2 rounded-md border p-2">
+            {isTestnet ? (
+              <FlaskConical className="h-4 w-4 text-amber-500 shrink-0" />
+            ) : (
+              <CircleAlert className="h-4 w-4 text-red-500 shrink-0" />
+            )}
+            <span className="text-xs">
+              Data source: <span className="font-medium">{isTestnet ? "Binance Testnet" : "Binance Production"}</span>
+            </span>
+          </div>
           {message.dataTimestamp && (
             <div>
               <p className="mb-1 text-xs font-medium text-muted-foreground">Data freshness</p>

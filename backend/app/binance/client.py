@@ -41,7 +41,7 @@ class BinanceRESTProvider:
     def __init__(self) -> None:
         settings = get_settings()
         self._client = httpx.AsyncClient(
-            base_url=settings.binance_base_url,
+            base_url=settings.binance_effective_base_url,
             timeout=settings.binance_request_timeout,
             headers={"Accept": "application/json"},
         )

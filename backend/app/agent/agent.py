@@ -16,6 +16,18 @@ from app.agent.tools import (
     get_order_book,
     get_recent_trades,
     get_ticker,
+    get_sub_accounts,
+    get_sub_account_assets,
+    get_sub_account_spot_summary,
+    get_sub_account_futures_account,
+    get_sub_account_futures_positions,
+    get_sub_account_futures_summary,
+    get_sub_account_margin_account,
+    get_sub_account_margin_summary,
+    get_sub_account_transfer_history,
+    get_sub_account_futures_transfer_history,
+    get_sub_account_universal_transfer_history,
+    get_sub_account_deposit_history,
 )
 from app.core.config import Settings, get_settings
 
@@ -45,20 +57,40 @@ def build_model(settings: Settings) -> OpenRouterModel:
 def build_market_agent(settings: Settings | None = None) -> Agent[AgentDeps, str]:
     """Factory for the market intelligence agent (also used in tests)."""
     settings = settings or get_settings()
+    tools = [
+        get_ticker,
+        get_24h_stats,
+        get_klines,
+        get_order_book,
+        get_recent_trades,
+        get_exchange_info,
+        get_indicators,
+    ]
+
+    # Register sub-account tools only if credentials are configured
+    from app.binance.sub_account_service import is_sub_account_configured
+    if is_sub_account_configured():
+        tools.extend([
+            get_sub_accounts,
+            get_sub_account_assets,
+            get_sub_account_spot_summary,
+            get_sub_account_futures_account,
+            get_sub_account_futures_positions,
+            get_sub_account_futures_summary,
+            get_sub_account_margin_account,
+            get_sub_account_margin_summary,
+            get_sub_account_transfer_history,
+            get_sub_account_futures_transfer_history,
+            get_sub_account_universal_transfer_history,
+            get_sub_account_deposit_history,
+        ])
+
     return Agent(
         build_model(settings),
         system_prompt=SYSTEM_PROMPT,
         deps_type=AgentDeps,
         retries=2,
-        tools=[
-            get_ticker,
-            get_24h_stats,
-            get_klines,
-            get_order_book,
-            get_recent_trades,
-            get_exchange_info,
-            get_indicators,
-        ],
+        tools=tools,
         defer_model_check=True,
     )
 

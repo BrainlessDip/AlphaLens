@@ -18,6 +18,7 @@ from app.agent.dependencies import AgentDeps
 from app.agent.tools import tool_label
 from app.auth.user_auth import current_user_dep
 from app.binance.client import BinanceRESTProvider
+from app.binance.sub_account_service import get_sub_account_service, is_sub_account_configured
 from app.core.config import get_settings
 from app.core.exceptions import AgentError, BinanceAPIError
 from app.db.database import get_session
@@ -37,6 +38,16 @@ async def get_provider() -> BinanceRESTProvider:
     if _provider is None:
         _provider = BinanceRESTProvider()
     return _provider
+
+
+def _get_sub_account():
+    """Lazy sub-account service init; returns None if not configured."""
+    try:
+        if is_sub_account_configured():
+            return get_sub_account_service()
+    except Exception:
+        pass
+    return None
 
 
 def map_provider_error(e: Exception) -> AgentError:
@@ -157,7 +168,7 @@ async def chat(
     _touch(conversation)
     await session.commit()
 
-    deps = AgentDeps(provider=provider)
+    deps = AgentDeps(provider=provider, sub_account=_get_sub_account())
     model_name = _model_name()
     chat_id = conversation.id
 
@@ -319,7 +330,7 @@ async def analyze(
         logger.error("Binance API error for %s: %s", symbol, e)
         raise BinanceAPIError(f"Failed to fetch data for {symbol}: {e}")
 
-    deps = AgentDeps(provider=provider)
+    deps = AgentDeps(provider=provider, sub_account=_get_sub_account())
     prompt = f"Analyze {symbol} market conditions. {request.question}"
 
     start = time.monotonic()

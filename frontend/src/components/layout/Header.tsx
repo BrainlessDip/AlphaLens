@@ -1,13 +1,15 @@
 import { Link, useLocation } from "react-router"
-import { MessageSquare, BarChart3, Settings, Menu, X, LogOut } from "lucide-react"
+import { MessageSquare, BarChart3, Settings, Menu, X, LogOut, Users } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
+import { EnvironmentBadge } from "@/components/binance/EnvironmentBadge"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/analyze", label: "Analyze", icon: BarChart3 },
+  { to: "/sub-account", label: "Sub Account", icon: Users },
   { to: "/settings", label: "Settings", icon: Settings },
 ]
 
@@ -49,6 +51,7 @@ export function Header() {
         <div className="flex-1" />
 
         <div className="hidden md:flex items-center gap-3">
+          <EnvironmentBadge />
           {user && (
             <>
               <span className="text-xs text-muted-foreground">{user.username}</span>

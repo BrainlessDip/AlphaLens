@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout"
 import { ChatPage } from "@/pages/ChatPage"
 import { AnalyzePage } from "@/pages/AnalyzePage"
 import { SettingsPage } from "@/pages/SettingsPage"
+import { SubAccountPage } from "@/pages/SubAccountPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { RegisterPage } from "@/pages/RegisterPage"
 import { SharedChatPage } from "@/pages/SharedChatPage"
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/chat" replace /> },
       { path: "analyze", element: <AnalyzePage /> },
+      { path: "sub-account", element: <SubAccountPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

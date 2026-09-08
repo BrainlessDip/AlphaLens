@@ -161,11 +161,58 @@ BINANCE_API_KEY=
 BINANCE_API_SECRET=
 BINANCE_BASE_URL=https://api.binance.com
 BINANCE_REQUEST_TIMEOUT=10.0
+
+# Binance Testnet/Sandbox (auto-enabled when credentials are empty)
+BINANCE_TESTNET=false
 ```
 
 **Required:** `OPENROUTER_API_KEY` — without this the LLM cannot respond.
 
 **Optional:** `BINANCE_API_KEY` / `BINANCE_API_SECRET` — only needed if you extend AlphaLens to access private Binance endpoints. Public market data (prices, klines, order books) works without them.
+
+**Optional (Testnet):** `BINANCE_TESTNET=true` — forces Binance Testnet/Sandbox mode even when production credentials are configured. If no credentials are set, testnet is automatically enabled.
+
+**Optional (Sub-Account):** `BINANCE_SUB_ACCOUNT_API_KEY` / `BINANCE_SUB_ACCOUNT_API_SECRET` — required for sub-account features. See [Binance Sub-Account Setup](#binance-sub-account-setup) below.
+
+### Binance Testnet / Sandbox
+
+AlphaLens automatically runs against Binance Testnet when production API credentials are not configured. This allows full UI, AI tools, and trading flows to work without real funds.
+
+**Automatic fallback:**
+- No credentials → Testnet mode (sandbox)
+- Production credentials → Production mode
+- `BINANCE_TESTNET=true` → Testnet (even with credentials)
+
+**Production mode:**
+```env
+BINANCE_API_KEY=your_production_key
+BINANCE_API_SECRET=your_production_secret
+BINANCE_TESTNET=false
+```
+
+**Testnet mode (manual):**
+```env
+BINANCE_API_KEY=your_testnet_key
+BINANCE_API_SECRET=your_testnet_secret
+BINANCE_TESTNET=true
+```
+
+**Testnet mode (auto-detected):**
+```env
+BINANCE_API_KEY=
+BINANCE_API_SECRET=
+```
+
+**Testnet endpoints:**
+- Market data: https://testnet.binance.vision (mirrors production prices)
+- Account data: simulated testnet balances
+- Trading: test funds only, no real financial effect
+
+**Testnet limitations:**
+- Some endpoints may not be available on testnet
+- Account data may differ from production
+- Sub-account features require production credentials
+- Testnet balances reset periodically
 
 ---
 
@@ -291,6 +338,83 @@ Check that `OPENROUTER_API_KEY` is valid and the model (`OPENROUTER_MODEL`) is a
 
 **Binance data unavailable**
 Binance public API may be temporarily down or rate-limited. Check https://status.binance.com. The health endpoint at `GET /api/v1/health` reports Binance connectivity status.
+
+---
+
+## Binance Sub-Account Setup
+
+AlphaLens can access your Binance master account's sub-account data through the [binance-sdk-sub-account](https://pypi.org/project/binance-sdk-sub-account/) package.
+
+### 1. Create Binance API Credentials
+
+1. Log in to your Binance account (master account with sub-accounts).
+2. Go to **API Management** → **Create API**.
+3. Enable the following permissions:
+   - **Enable Reading** (required) — sub-account list, assets, status
+   - **Enable Spot & Margin Trading** (optional) — only needed for write operations like transfers
+   - **Enable Futures** (optional) — only needed for futures-related endpoints
+4. Optionally restrict to trusted IPs.
+
+### 2. Required Permissions
+
+| Feature | API Permission Needed |
+|---|---|
+| Sub-account list, status | Enable Reading |
+| Spot assets / balances | Enable Reading |
+| Futures account / positions | Enable Reading |
+| Margin account | Enable Reading |
+| Transfer history | Enable Reading |
+| Deposit history | Enable Reading |
+| Spot asset transfers | Enable Spot & Margin Trading |
+| Futures transfers | Enable Spot & Margin Trading |
+| Universal transfers | Enable Spot & Margin Trading + Enable Futures |
+
+### 3. Environment Variables
+
+```env
+# Sub-Account API (use your master account API key)
+BINANCE_SUB_ACCOUNT_API_KEY=your_master_api_key
+BINANCE_SUB_ACCOUNT_API_SECRET=your_master_api_secret
+
+# Or fall back to the generic Binance API key
+BINANCE_API_KEY=your_key
+BINANCE_API_SECRET=your_secret
+```
+
+If `BINANCE_SUB_ACCOUNT_API_KEY` is not set, AlphaLens falls back to `BINANCE_API_KEY`.
+
+### 4. Features
+
+**Read-only features** (always safe):
+- List sub-accounts and their status (futures/margin/options enabled)
+- View spot balances per sub-account
+- View futures account balance, PnL, and positions
+- View margin account borrow/lending data
+- Query transfer history (spot, futures, universal)
+- Query deposit history
+- Spot assets summary (BTC-valued)
+
+**AI Agent tools** — The agent automatically uses sub-account tools when users ask questions like:
+- "How much BTC do I have?"
+- "Show my sub-account balances"
+- "What are my open futures positions?"
+- "Show my transfer history"
+
+### 5. Security
+
+- API secrets are **never** sent to the frontend
+- Credentials stay in backend environment variables only
+- Sub-account tool results don't expose signing material or API keys
+- The `/api/v1/sub-account/config` endpoint only reports whether credentials are configured (true/false)
+
+### 6. Frontend
+
+Navigate to **Sub Account** in the header to view:
+- Sub-account list and selection
+- Spot asset table (searchable, hide-zero filter)
+- Futures account details and open positions
+- Margin account summary
+- Transfer and deposit history
 
 ---
 
